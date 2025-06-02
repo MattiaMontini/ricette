@@ -20,7 +20,7 @@
 
 				// Recupera il numero di elementi nel carrello dal backend
 				try {
-					const res = await fetch('http://localhost:3000/api/carrello', {
+					const res = await fetch('https://ricette.onrender.com/api/carrello', {
 						headers: {
 							Authorization: `Bearer ${token}`
 						}
@@ -53,7 +53,7 @@
 			const token = localStorage.getItem('token');
 			if (!token) throw new Error('Non autenticato');
 
-			const res = await fetch('http://localhost:3000/api/carrello', {
+			const res = await fetch('https://ricette.onrender.com/api/carrello', {
 				method: 'DELETE',
 				headers: {
 					Authorization: `Bearer ${token}`
@@ -78,7 +78,7 @@
 			const token = localStorage.getItem('token');
 			if (!token) throw new Error('Non autenticato');
 
-			const res = await fetch(`http://localhost:3000/api/carrello/${encodeURIComponent(nome)}`, {
+			const res = await fetch(`https://ricette.onrender.com/api/carrello/${encodeURIComponent(nome)}`, {
 				method: 'DELETE',
 				headers: {
 					Authorization: `Bearer ${token}`
@@ -132,7 +132,7 @@
 		if (!token) return;
 
 		try {
-			const res = await fetch('http://localhost:3000/api/carrello', {
+			const res = await fetch('https://ricette.onrender.com/api/carrello', {
 				headers: {
 					Authorization: `Bearer ${token}`
 				}

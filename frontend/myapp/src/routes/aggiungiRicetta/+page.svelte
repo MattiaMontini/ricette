@@ -34,7 +34,7 @@
 		}
 
 		try {
-			const res = await fetch('http://localhost:3000/categorie');
+			const res = await fetch('https://ricette.onrender.com/categorie');
 			if (res.ok) {
 				categorie = await res.json();
 			} else {
@@ -124,7 +124,7 @@
 			formData.append('difficolta', difficolta);
 			formData.append('immagine', immagine);
 
-			const res = await fetch('http://localhost:3000/ricette', {
+			const res = await fetch('https://ricette.onrender.com/ricette', {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token}`

@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'https://ricette.onrender.com';
 
 
 export async function getRicette() {

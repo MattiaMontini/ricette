@@ -32,7 +32,7 @@
 		}
 
 		try {
-			const res = await fetch('http://localhost:3000/api/registrazione', {
+			const res = await fetch('https://ricette.onrender.com/api/registrazione', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ nome, cognome, email, password })
