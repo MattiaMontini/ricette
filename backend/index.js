@@ -8,9 +8,9 @@ const auth = require('./middleware/auth');
 const jwt = require('./middleware/jwt');
 
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const app = express();
 app.use(cors());
@@ -18,7 +18,25 @@ app.use(bodyParser.json());
 
 let database;
 
-//Connessione al DB
+// Configura Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'ricette',           // cartella su Cloudinary
+    allowed_formats: ['jpg', 'jpeg', 'png'],
+    transformation: [{ width: 800, height: 600, crop: 'limit' }]
+  }
+});
+
+const upload = multer({ storage });
+
+// Connessione al DB
 const connectToDatabase = async () => {
   try {
     const client = await MongoClient.connect(process.env.MONGODB_URI);
@@ -26,13 +44,12 @@ const connectToDatabase = async () => {
     return client.db('mongodb');
   } catch (error) {
     console.log("Error connecting to Database\n");
-    console.log(error)
+    console.log(error);
     process.exit(1);
   }
 }
 
-
-//function to run the server
+// Avvio server
 const startServer = async () => {
   database = await connectToDatabase();
   app.listen(process.env.PORT, () => {
@@ -41,7 +58,7 @@ const startServer = async () => {
 }
 startServer();
 
-//Rotta per vedere tutte le ricette
+// Rotta per vedere tutte le ricette
 app.get('/ricette', async (req, res) => {
   if (!database) {
     return res.status(500).json({ error: 'Database not connected' });
@@ -66,29 +83,7 @@ app.get('/ricette', async (req, res) => {
   }
 });
 
-
-const uploadFolder = path.join(__dirname, '..', 'frontend', 'myapp', 'static');
-
-if (!fs.existsSync(uploadFolder)) {
-  fs.mkdirSync(uploadFolder, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadFolder);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({ storage: storage });
-
-
-
-//Rotta per vedere una ricetta in particolare
+// Rotta per vedere una ricetta in particolare
 app.get('/ricette/:id', async (req, res) => {
   if (!database) {
     return res.status(500).json({ error: 'Database not connected' });
@@ -106,7 +101,7 @@ app.get('/ricette/:id', async (req, res) => {
   }
 });
 
-// Rotta per ottenere la lista della spesa personalizzata
+// Rotta lista spesa personalizzata
 app.post('/lista-spesa', async (req, res) => {
   if (!database) {
     return res.status(500).json({ error: 'Database not connected' });
@@ -119,9 +114,7 @@ app.post('/lista-spesa', async (req, res) => {
   }
 
   try {
-    // Converte gli ID stringa in ObjectId
     const objectIds = ricette.map(id => new ObjectId(id));
-
     const results = await database.collection('ricette').find({ _id: { $in: objectIds } }).toArray();
 
     const listaSpesa = {};
@@ -133,13 +126,11 @@ app.post('/lista-spesa', async (req, res) => {
         const nome = ingrediente.nome;
         const quantita = ingrediente.quantita;
 
-        // Gestione "q.b." (quanto basta)
         if (quantita.toLowerCase() === 'q.b.') {
           listaSpesa[nome] = 'q.b.';
           continue;
         }
 
-        // Estrai numero e unità
         const match = quantita.match(/^([\d.,]+)\s*(\w*)$/);
         if (!match) continue;
 
@@ -152,13 +143,11 @@ app.post('/lista-spesa', async (req, res) => {
             unita: unita
           };
         } else {
-          // Se l'ingrediente è già presente e ha un valore numerico
           listaSpesa[nome].valore += valore * moltiplicatore;
         }
       }
     }
 
-    // Formatta la lista per l’output finale
     const listaFinale = Object.entries(listaSpesa).map(([nome, val]) => {
       if (val === 'q.b.') {
         return { nome, quantita: 'q.b.' };
@@ -177,7 +166,6 @@ app.post('/lista-spesa', async (req, res) => {
   }
 });
 
-
 app.get('/categorie', async (req, res) => {
   if (!database) {
     return res.status(500).json({ error: 'Database not connected' });
@@ -191,7 +179,7 @@ app.get('/categorie', async (req, res) => {
   }
 });
 
-
+// Rotta per creare nuova ricetta con upload immagine su Cloudinary
 app.post('/ricette', auth, upload.single('immagine'), async (req, res) => {
   if (!database) return res.status(500).json({ error: 'Database not connected' });
 
@@ -215,19 +203,16 @@ app.post('/ricette', auth, upload.single('immagine'), async (req, res) => {
     return res.status(400).json({ error: 'Campi obbligatori mancanti' });
   }
 
-  // Converti porzioni in numero e verifica
   const porzioniNum = Number(porzioni);
   if (isNaN(porzioniNum) || porzioniNum <= 0) {
     return res.status(400).json({ error: 'Porzioni non valide' });
   }
 
-  // Converti difficolta in numero e verifica (opzionale)
   const difficoltaNum = Number(difficolta);
   if (isNaN(difficoltaNum) || difficoltaNum < 1 || difficoltaNum > 5) {
     return res.status(400).json({ error: 'Difficoltà non valida' });
   }
 
-  // Parse ingredienti e istruzioni (potrebbero arrivare come stringhe JSON)
   let parsedIngredienti, parsedIstruzioni;
   try {
     parsedIngredienti = typeof ingredienti === 'string' ? JSON.parse(ingredienti) : ingredienti;
@@ -245,7 +230,7 @@ app.post('/ricette', auth, upload.single('immagine'), async (req, res) => {
       porzioni: porzioniNum,
       categoria: categoria || null,
       difficolta: difficoltaNum,
-      immagine: req.file.filename,
+      immagine: req.file.path,  // URL Cloudinary
       ingredienti: parsedIngredienti,
       istruzioni: parsedIstruzioni,
       createdBy: req.user.id,
@@ -265,10 +250,7 @@ app.post('/ricette', auth, upload.single('immagine'), async (req, res) => {
   }
 });
 
-
-
-
-// Endpoint per il login, che rilascia il token
+// Login
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -304,6 +286,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Registrazione
 app.post('/api/registrazione', async (req, res) => {
   const { nome, cognome, email, password } = req.body;
 
@@ -312,42 +295,27 @@ app.post('/api/registrazione', async (req, res) => {
   }
 
   try {
-    // Controlla se utente esiste
     const existingUser = await database.collection('utenti').findOne({ email });
     if (existingUser) {
-      return res.status(409).json({ error: 'Email già registrata' });
+      return res.status(409).json({ error: 'Utente già registrato' });
     }
 
-    // Crea utente (puoi aggiungere hash password qui)
-    const newUser = {
+    const result = await database.collection('utenti').insertOne({
       nome,
       cognome,
       email,
-      password,  // attenzione: salva la password hashata in produzione
-      createdAt: new Date()
-    };
-
-    const result = await database.collection('utenti').insertOne(newUser);
-
-    // Genera token JWT (usando il tuo modulo jwt)
-    const token = jwt.generateToken({ id: result.insertedId.toString(), nome, cognome });
-
-    // Risposta con token e user
-    res.status(201).json({
-      token,
-      user: {
-        id: result.insertedId.toString(),
-        nome,
-        cognome,
-        email
-      }
+      password
     });
 
+    res.status(201).json({ message: 'Utente registrato con successo' });
+
   } catch (error) {
-    console.error('Errore registrazione:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
+    console.error('Errore:', error);
+    res.status(500).json({ error: 'Errore interno' });
   }
 });
+
+
 
 // Aggiunge ingredienti al carrello
 app.post('/api/carrello', auth, async (req, res) => {
