@@ -14,7 +14,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const app = express();
 app.use(cors({
-  origin: 'https://ricette.onrender.com'
+  origin: 'https://ricette.onrender.com',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
