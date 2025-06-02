@@ -273,9 +273,12 @@
 		<div class="card bg-base-100 shadow-xl">
 			<figure>
 				<img
-					class="w-full max-h-96 object-cover"
-					src={'/' + ricetta.immagine}
-					alt={`Immagine di ${ricetta.titolo}`}
+					<img
+  class="w-full max-h-96 object-cover"
+  src={ricetta.immagine.startsWith('http') ? ricetta.immagine : '/' + ricetta.immagine}
+  alt={`Immagine di ${ricetta.titolo}`}
+/>
+
 				/>
 			</figure>
 			<div class="card-body">
