@@ -12,33 +12,45 @@
 	let numeroCarrello = 0;
 
 	onMount(async () => {
-		try {
-			ricette = await getRicette();
-			categorie = await getCategorie();
-			await caricaNumeroCarrello();
+	try {
+		ricette = await getRicette();
+		categorie = await getCategorie();
 
-			// Verifica autenticazione
-			const token = localStorage.getItem('token');
-			isAuthenticated = !!token;
+		// Ordina le categorie nell'ordine desiderato
+		const ordineCategorie = ['antipasto', 'primo', 'secondo', 'contorno', 'dolce'];
+		categorie = categorie.sort((a, b) => {
+			const indexA = ordineCategorie.indexOf(a.toLowerCase());
+			const indexB = ordineCategorie.indexOf(b.toLowerCase());
+			if (indexA === -1) return 1;
+			if (indexB === -1) return -1;
+			return indexA - indexB;
+		});
 
-			// Se autenticato, recupera info utente da localStorage (devi salvare nome e email)
-			if (isAuthenticated) {
-				const userString = localStorage.getItem('user');
-				user = userString ? JSON.parse(userString) : null;
-			}
+		await caricaNumeroCarrello();
 
-			// Chiudi il menu se clicchi fuori
-			const closeMenu = () => {
-				showUserMenu = false;
-			};
-			window.addEventListener('click', closeMenu);
-			onDestroy(() => {
-				window.removeEventListener('click', closeMenu);
-			});
-		} catch (error) {
-			console.error('Errore nel fetch:', error);
+		// Verifica autenticazione
+		const token = localStorage.getItem('token');
+		isAuthenticated = !!token;
+
+		// Se autenticato, recupera info utente da localStorage (devi salvare nome e email)
+		if (isAuthenticated) {
+			const userString = localStorage.getItem('user');
+			user = userString ? JSON.parse(userString) : null;
 		}
-	});
+
+		// Chiudi il menu se clicchi fuori
+		const closeMenu = () => {
+			showUserMenu = false;
+		};
+		window.addEventListener('click', closeMenu);
+		onDestroy(() => {
+			window.removeEventListener('click', closeMenu);
+		});
+	} catch (error) {
+		console.error('Errore nel fetch:', error);
+	}
+});
+
 
 	async function caricaNumeroCarrello() {
 		const token = localStorage.getItem('token');
